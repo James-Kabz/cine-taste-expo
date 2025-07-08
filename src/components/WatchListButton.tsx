@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
 import { watchlistService } from '../services/apiService';
 import { COLORS } from '../utils/constants';
 
@@ -18,7 +19,13 @@ const WatchListButton: React.FC<WatchlistButtonProps> = ({
   isInWatchlist,
   onToggle,
 }) => {
+  const { session } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Don't render the button if user is not authenticated
+  if (!session) {
+    return null;
+  }
 
   const handlePress = async () => {
     setIsLoading(true);

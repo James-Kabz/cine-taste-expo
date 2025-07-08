@@ -17,50 +17,66 @@ import { COLORS } from '../utils/constants';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-const TabNavigator = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      tabBarIcon: ({ focused, color, size }) => {
-        let iconName: keyof typeof MaterialIcons.glyphMap;
-        switch (route.name) {
-          case 'Home':
-            iconName = 'home';
-            break;
-          case 'Search':
-            iconName = 'search';
-            break;
-          case 'Watchlist':
-            iconName = 'bookmark';
-            break;
-          case 'Profile':
-            iconName = 'person';
-            break;
-          default:
-            iconName = 'home';
-        }
-        return <MaterialIcons name={iconName} size={size} color={color} />;
-      },
-      tabBarActiveTintColor: COLORS.primary,
-      tabBarInactiveTintColor: COLORS.textSecondary,
-      tabBarStyle: {
-        backgroundColor: COLORS.background,
-        borderTopColor: COLORS.card,
-      },
-      headerStyle: {
-        backgroundColor: COLORS.background,
-      },
-      headerTintColor: COLORS.text,
-    })}
-  >
-    <Tab.Screen name="Home" component={HomeScreen} />
-    <Tab.Screen name="Search" component={SearchScreen} />
-    <Tab.Screen name="Watchlist" component={WatchlistScreen} />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
-  </Tab.Navigator>
-);
+const TabNavigator = () => {
+  const { session } = useAuth();
+  
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof MaterialIcons.glyphMap;
+          switch (route.name) {
+            case 'Home':
+              iconName = 'home';
+              break;
+            case 'Search':
+              iconName = 'search';
+              break;
+            case 'Watchlist':
+              iconName = 'bookmark';
+              break;
+            case 'Profile':
+              iconName = 'person';
+              break;
+            default:
+              iconName = 'home';
+          }
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarStyle: {
+          backgroundColor: COLORS.background,
+          borderTopColor: COLORS.card,
+        },
+        headerStyle: {
+          backgroundColor: COLORS.background,
+        },
+        headerTintColor: COLORS.text,
+      })}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Search" component={SearchScreen} />
+      <Tab.Screen 
+        name="Watchlist" 
+        component={session ? WatchlistScreen : AuthScreen}
+        options={{
+          tabBarBadge: !session ? '!' : undefined,
+        }}
+      />
+      <Tab.Screen 
+        name="Profile" 
+        component={session ? ProfileScreen : AuthScreen}
+        options={{
+          tabBarBadge: !session ? '!' : undefined,
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
 
 const AppNavigator = () => {
-  const { session, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return <LoadingSpinner text="Loading..." />;
@@ -76,26 +92,21 @@ const AppNavigator = () => {
           headerTintColor: COLORS.text,
         }}
       >
-        {session ? (
-          <>
-            <Stack.Screen 
-              name="Main" 
-              component={TabNavigator} 
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen 
-              name="MovieDetail" 
-              component={MovieDetailScreen}
-              options={{ title: 'Movie Details' }}
-            />
-          </>
-        ) : (
-          <Stack.Screen 
-            name="Auth" 
-            component={AuthScreen}
-            options={{ headerShown: false }}
-          />
-        )}
+        <Stack.Screen 
+          name="Main" 
+          component={TabNavigator} 
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="MovieDetail" 
+          component={MovieDetailScreen}
+          options={{ title: 'Movie Details' }}
+        />
+        <Stack.Screen 
+          name="Auth" 
+          component={AuthScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

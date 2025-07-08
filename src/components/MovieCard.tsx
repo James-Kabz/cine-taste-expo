@@ -13,33 +13,47 @@ interface MovieCardProps {
 }
 
 const MovieCard: React.FC<MovieCardProps> = ({ movie, onPress }) => {
-  const title = movie.title || movie.name || 'Unknown Title';
-  const year = movie.release_date || movie.first_air_date || '';
-  const posterUrl = movie.poster_path 
-    ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}`
-    : 'https://via.placeholder.com/500x750?text=No+Image';
+  try {
+    const title = movie.title || movie.name || 'Unknown Title';
+    const year = movie.release_date || movie.first_air_date || '';
+    const posterUrl = movie.poster_path 
+      ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}`
+      : 'https://via.placeholder.com/500x750?text=No+Image';
+    
+    const rating = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
 
-  return (
-    <TouchableOpacity style={[styles.container, { width: cardWidth }]} onPress={onPress}>
-      <Image
-        style={styles.poster}
-        source={{ uri: posterUrl }}
-        contentFit="cover"
-        transition={200}
-      />
-      <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={2}>
-          {title}
-        </Text>
-        <Text style={styles.year}>
-          {year ? new Date(year).getFullYear() : ''}
-        </Text>
-        <Text style={styles.rating}>
-          ★ {movie.vote_average.toFixed(1)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+    return (
+      <TouchableOpacity style={[styles.container, { width: cardWidth }]} onPress={onPress}>
+        <Image
+          style={styles.poster}
+          source={{ uri: posterUrl }}
+          contentFit="cover"
+          transition={200}
+        />
+        <View style={styles.info}>
+          <Text style={styles.title} numberOfLines={2}>
+            {title}
+          </Text>
+          <Text style={styles.year}>
+            {year ? new Date(year).getFullYear() : ''}
+          </Text>
+          <Text style={styles.rating}>
+            ★ {rating}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  } catch (error) {
+    console.error('Error rendering MovieCard:', error);
+    return (
+      <TouchableOpacity style={[styles.container, { width: cardWidth }]}>
+        <View style={styles.poster} />
+        <View style={styles.info}>
+          <Text style={styles.title}>Error loading movie</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
 };
 
 const styles = StyleSheet.create({

@@ -5,11 +5,13 @@ export const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 export const TMDB_BACKDROP_BASE_URL = 'https://image.tmdb.org/t/p/w1280';
 
 export const MOVIE_CATEGORIES = {
-  POPULAR: 'popular',
-  TOP_RATED: 'top_rated',
-  NOW_PLAYING: 'now_playing',
-  UPCOMING: 'upcoming',
-} as const;
+  POPULAR: 'popular' as const,
+  TOP_RATED: 'top_rated' as const,
+  NOW_PLAYING: 'now_playing' as const,
+  UPCOMING: 'upcoming' as const,
+};
+
+export type MovieCategory = typeof MOVIE_CATEGORIES[keyof typeof MOVIE_CATEGORIES];
 
 export const COLORS = {
   primary: '#e50914',

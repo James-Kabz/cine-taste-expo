@@ -30,7 +30,20 @@ export const movieService = {
 
   searchMovies: async (query: string, page: number = 1): Promise<Movie[]> => {
     const response = await apiClient.get(`/movies?q=${encodeURIComponent(query)}&type=multi&page=${page}`);
-    return response.data.results || response.data;
+    // Ensure each movie has at least default values for required fields
+    return response.data.results?.map((movie: any) => ({
+      ...movie,
+      vote_average: movie.vote_average || 0,
+      vote_count: movie.vote_count || 0,
+      overview: movie.overview || '',
+      poster_path: movie.poster_path || '',
+      backdrop_path: movie.backdrop_path || '',
+      genre_ids: movie.genre_ids || [],
+      adult: movie.adult || false,
+      original_language: movie.original_language || 'en',
+      popularity: movie.popularity || 0,
+      media_type: movie.media_type || 'movie'
+    })) || [];
   },
 
   getMovieDetails: async (movieId: number, mediaType: 'movie' | 'tv' = 'movie') => {

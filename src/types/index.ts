@@ -1,16 +1,16 @@
 
 export interface Movie {
   id: number;
-  title?: string;
-  name?: string;
+  title?: string; // for movies
+  name?: string; // for TV shows
   overview: string;
-  poster_path: string;
-  backdrop_path: string;
-  release_date?: string;
-  first_air_date?: string;
-  vote_average: number;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date?: string; // for movies
+  first_air_date?: string; // for TV shows
+  vote_average?: number;
   vote_count: number;
-  genre_ids: number[];
+  genre_ids?: number[];
   genres?: Genre[];
   adult: boolean;
   original_language: string;
@@ -19,8 +19,13 @@ export interface Movie {
   runtime?: number;
   tagline?: string;
   status?: string;
+  // TV show specific
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  // Movie specific
+  budget?: number;
+  revenue?: number;
 }
-
 export interface Genre {
   id: number;
   name: string;
