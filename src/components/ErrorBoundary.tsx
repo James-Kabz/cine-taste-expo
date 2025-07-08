@@ -1,51 +1,50 @@
 
-import React from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../utils/constants';
 
-interface ErrorBoundaryState {
+interface Props {
+  children: ReactNode;
+}
+
+interface State {
   hasError: boolean;
   error?: Error;
 }
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-}
+class ErrorBoundary extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+  };
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
-  handleReset = () => {
+  private handleRetry = () => {
     this.setState({ hasError: false, error: undefined });
   };
 
-  render() {
+  public render() {
     if (this.state.hasError) {
       return (
         <View style={styles.container}>
-          <MaterialIcons name="error-outline" size={64} color={COLORS.primary} />
+          <MaterialIcons name="error-outline" size={64} color={COLORS.error} />
           <Text style={styles.title}>Oops! Something went wrong</Text>
           <Text style={styles.message}>
-            We encountered an unexpected error. Please try again.
+            We're sorry, but something unexpected happened. Please try again.
           </Text>
-          {__DEV__ && this.state.error && (
+          {process.env.NODE_ENV === 'development' && this.state.error && (
             <Text style={styles.errorDetails}>
               {this.state.error.toString()}
             </Text>
           )}
-          <TouchableOpacity style={styles.retryButton} onPress={this.handleReset}>
+          <TouchableOpacity style={styles.retryButton} onPress={this.handleRetry}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -62,38 +61,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
-    padding: 32,
+    padding: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.text,
+    marginTop: 20,
+    marginBottom: 10,
     textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 8,
   },
   message: {
     fontSize: 16,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     lineHeight: 24,
   },
   errorDetails: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: COLORS.error,
     textAlign: 'center',
-    marginBottom: 24,
-    fontFamily: 'monospace',
+    marginBottom: 20,
+    padding: 10,
+    backgroundColor: COLORS.card,
+    borderRadius: 8,
   },
   retryButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: COLORS.background,
+    color: COLORS.text,
     fontSize: 16,
     fontWeight: '600',
   },

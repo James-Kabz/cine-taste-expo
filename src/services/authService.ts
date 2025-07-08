@@ -9,10 +9,10 @@ WebBrowser.maybeCompleteAuthSession();
 const googleClientId = Constants.expoConfig?.extra?.googleWebClientId;
 
 export const authService = {
-  // Google OAuth with Expo AuthSession
   signInWithGoogle: async (): Promise<AuthSessionType> => {
     try {
       const redirectUri = AuthSession.makeRedirectUri({
+        scheme: 'cinetaste',
         // useProxy: true,
       });
 
@@ -30,7 +30,6 @@ export const authService = {
       });
 
       if (result.type === 'success') {
-        // Exchange code for tokens
         const tokenResult = await AuthSession.exchangeCodeAsync(
           {
             clientId: googleClientId!,
@@ -43,13 +42,11 @@ export const authService = {
           }
         );
 
-        // Get user info from Google
         const userInfoResponse = await fetch(
           `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${tokenResult.accessToken}`
         );
         const userInfo = await userInfoResponse.json();
 
-        // Send to your backend for session creation
         const response = await fetch(`${Constants.expoConfig?.extra?.apiUrl}/auth/signin/google`, {
           method: 'POST',
           headers: {
@@ -83,7 +80,6 @@ export const authService = {
     }
   },
 
-  // Sign Out
   signOut: async (): Promise<void> => {
     try {
       await AsyncStorage.removeItem('authSession');
@@ -92,7 +88,6 @@ export const authService = {
     }
   },
 
-  // Get stored session
   getStoredSession: async (): Promise<AuthSessionType | null> => {
     try {
       const sessionString = await AsyncStorage.getItem('authSession');
@@ -102,7 +97,6 @@ export const authService = {
     }
   },
 
-  // Check if user is authenticated
   isAuthenticated: async (): Promise<boolean> => {
     const session = await authService.getStoredSession();
     return !!session?.token;

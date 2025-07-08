@@ -1,3 +1,4 @@
+
 export interface Movie {
   id: number;
   title?: string;
@@ -49,4 +50,25 @@ export interface User {
 export interface AuthSession {
   user: User;
   token: string;
+}
+
+export interface Cast {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string;
+  order: number;
+}
+
+export interface Crew {
+  id: number;
+  name: string;
+  job: string;
+  department: string;
+  profile_path: string;
+}
+
+export interface Credits {
+  cast: Cast[];
+  crew: Crew[];
 }

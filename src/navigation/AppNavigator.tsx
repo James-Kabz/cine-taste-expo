@@ -8,10 +8,11 @@ import { useAuth } from '../contexts/AuthContext';
 import HomeScreen from '../screens/HomeScreen';
 import SearchScreen from '../screens/SearchScreen';
 import WatchlistScreen from '../screens/WatchlistScreen';
+import MovieDetailScreen from '../screens/MovieDetailScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import AuthScreen from '../screens/AuthScreen';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { COLORS } from '../utils/constants';
-import MovieDetailScreen from '../screens/MovieDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -62,7 +63,7 @@ const AppNavigator = () => {
   const { session, isLoading } = useAuth();
 
   if (isLoading) {
-    return null; // Add loading screen component
+    return <LoadingSpinner text="Loading..." />;
   }
 
   return (

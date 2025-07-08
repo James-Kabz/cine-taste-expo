@@ -18,4 +18,7 @@ export const COLORS = {
   text: '#ffffff',
   textSecondary: '#b3b3b3',
   accent: '#46d369',
+  error: '#ff6b6b',
+  warning: '#ffa726',
+  success: '#4caf50',
 };
