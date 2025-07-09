@@ -13,9 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.cinetaste"
     },
     "android": {
+      "package": "com.yourcompany.cinetaste",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -27,7 +29,13 @@
     },
     "scheme": "cinetaste",
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-dev-client",
+        {
+          "launchMode": "most-recent"
+        }
+      ]
     ],
     "extra": {
       "eas": {

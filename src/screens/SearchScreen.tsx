@@ -1,16 +1,19 @@
-
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useMovieSearch } from '../hooks/useMovies';
 import SearchBar from '../components/SearchBar';
 import MovieCard from '../components/MovieCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { COLORS } from '../utils/constants';
 import { Movie } from '../types';
+import { RootStackParamList } from '../navigation/AppNavigator';
+
+type SearchScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const SearchScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<SearchScreenNavigationProp>();
   const [searchQuery, setSearchQuery] = useState('');
   const { movies, isLoading, error, searchMovies, clearSearch } = useMovieSearch();
 
@@ -25,10 +28,10 @@ const SearchScreen = () => {
   };
 
   const handleMoviePress = (movie: Movie) => {
-    (navigation as any).navigate('MovieDetail' as never, { 
-      movieId: movie.id, 
-      mediaType: movie.media_type || 'movie' 
-    } as never);
+    navigation.navigate('MovieDetail', {
+      movieId: movie.id,
+      mediaType: movie.media_type || (movie.name ? 'tv' : 'movie')
+    });
   };
 
   const renderEmptyState = () => {

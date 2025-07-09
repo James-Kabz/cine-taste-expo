@@ -14,8 +14,24 @@ import AuthScreen from '../screens/AuthScreen';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { COLORS } from '../utils/constants';
 
-const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator();
+export type RootStackParamList = {
+  Main: undefined;
+  MovieDetail: {
+    movieId: number;
+    mediaType: 'movie' | 'tv';
+  };
+  Auth: undefined;
+};
+
+export type TabParamList = {
+  Home: undefined;
+  Search: undefined;
+  Watchlist: undefined;
+  Profile: undefined;
+};
+
+const Tab = createBottomTabNavigator<TabParamList>();
+const Stack = createStackNavigator<RootStackParamList>();
 
 const TabNavigator = () => {
   const { session } = useAuth();
@@ -100,7 +116,7 @@ const AppNavigator = () => {
         <Stack.Screen 
           name="MovieDetail" 
           component={MovieDetailScreen}
-          options={{ title: 'Movie Details' }}
+          options={{ title: 'Details' }}
         />
         <Stack.Screen 
           name="Auth" 

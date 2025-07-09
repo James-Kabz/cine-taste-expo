@@ -1,104 +1,74 @@
+
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
-import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AuthSession as AuthSessionType } from '../types';
+import { API_BASE_URL } from '../utils/constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const googleClientId = Constants.expoConfig?.extra?.googleWebClientId;
+const redirectUri = AuthSession.makeRedirectUri({
+  scheme: 'cinetaste',
+});
 
 export const authService = {
-  signInWithGoogle: async (): Promise<AuthSessionType> => {
+  signInWithGoogle: async () => {
     try {
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: 'cinetaste',
-        // useProxy: true,
-      });
-
       const request = new AuthSession.AuthRequest({
-        clientId: googleClientId!,
+        clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '',
         scopes: ['openid', 'profile', 'email'],
         redirectUri,
         responseType: AuthSession.ResponseType.Code,
-        extraParams: {},
       });
 
       const result = await request.promptAsync({
         authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-        // useProxy: true,
       });
 
       if (result.type === 'success') {
-        const tokenResult = await AuthSession.exchangeCodeAsync(
-          {
-            clientId: googleClientId!,
-            code: result.params.code,
-            redirectUri,
-            extraParams: {},
-          },
-          {
-            tokenEndpoint: 'https://oauth2.googleapis.com/token',
-          }
-        );
-
-        const userInfoResponse = await fetch(
-          `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${tokenResult.accessToken}`
-        );
-        const userInfo = await userInfoResponse.json();
-
-        const response = await fetch(`${Constants.expoConfig?.extra?.apiUrl}/auth/signin/google`, {
+        const { code } = result.params;
+        
+        // Exchange code for token with your backend
+        const response = await fetch(`${API_BASE_URL}/auth/google`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            accessToken: tokenResult.accessToken,
-            userInfo,
-          }),
+          body: JSON.stringify({ code, redirectUri }),
         });
 
-        const sessionData = await response.json();
+        const data = await response.json();
         
-        const authSession: AuthSessionType = {
-          user: {
-            id: userInfo.id,
-            name: userInfo.name,
-            email: userInfo.email,
-            image: userInfo.picture,
-          },
-          token: sessionData.token,
-        };
-
-        await AsyncStorage.setItem('authSession', JSON.stringify(authSession));
-        return authSession;
+        if (response.ok) {
+          await AsyncStorage.setItem('authSession', JSON.stringify(data));
+          return data;
+        } else {
+          throw new Error(data.error || 'Authentication failed');
+        }
       }
-
-      throw new Error('Authentication cancelled');
+      
+      throw new Error('Authentication was cancelled');
     } catch (error) {
+      console.error('Google sign-in error:', error);
       throw error;
     }
   },
 
-  signOut: async (): Promise<void> => {
+  signOut: async () => {
     try {
       await AsyncStorage.removeItem('authSession');
     } catch (error) {
+      console.error('Sign out error:', error);
       throw error;
     }
   },
 
-  getStoredSession: async (): Promise<AuthSessionType | null> => {
+  getStoredSession: async () => {
     try {
       const sessionString = await AsyncStorage.getItem('authSession');
       return sessionString ? JSON.parse(sessionString) : null;
     } catch (error) {
+      console.error('Get stored session error:', error);
       return null;
     }
-  },
-
-  isAuthenticated: async (): Promise<boolean> => {
-    const session = await authService.getStoredSession();
-    return !!session?.token;
   },
 };

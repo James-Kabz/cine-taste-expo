@@ -21,10 +21,10 @@ const WatchlistScreen = () => {
   });
 
   const handleMoviePress = (item: WatchlistItem) => {
-    (navigation as any).navigate('MovieDetail' as never, { 
+    (navigation as any).navigate('MovieDetail', { 
       movieId: item.movieId, 
       mediaType: item.mediaType 
-    } as never);
+    });
   };
 
   const handleRemove = (item: WatchlistItem) => {

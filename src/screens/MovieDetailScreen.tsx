@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, ScrollView, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -10,14 +12,18 @@ import { recentlyViewedService } from '../services/apiService';
 import LoadingSpinner from '../components/LoadingSpinner';
 import WatchListButton from '../components/WatchListButton';
 import { COLORS, TMDB_IMAGE_BASE_URL, TMDB_BACKDROP_BASE_URL } from '../utils/constants';
+import { RootStackParamList } from '../navigation/AppNavigator';
 
 const { width, height } = Dimensions.get('window');
 
+type MovieDetailScreenRouteProp = RouteProp<RootStackParamList, 'MovieDetail'>;
+type MovieDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MovieDetail'>;
+
 const MovieDetailScreen = () => {
-    const route = useRoute();
-    const navigation = useNavigation();
+    const route = useRoute<MovieDetailScreenRouteProp>();
+    const navigation = useNavigation<MovieDetailScreenNavigationProp>();
     const { session } = useAuth();
-    const { movieId, mediaType } = route.params as { movieId: number; mediaType: 'movie' | 'tv' };
+    const { movieId, mediaType } = route.params;
     const { movie, isLoading, error } = useMovieDetails(movieId, mediaType);
     const [isInWatchlist, setIsInWatchlist] = useState(false);
 
@@ -35,7 +41,7 @@ const MovieDetailScreen = () => {
     if (error || !movie) {
         return (
             <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error || 'Movie not found'}</Text>
+                <Text style={styles.errorText}>{error || 'Content not found'}</Text>
                 <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => navigation.goBack()}
@@ -65,7 +71,7 @@ const MovieDetailScreen = () => {
     const genreNames = movie.genres?.map(g => g.name).join(', ') || 'Unknown';
 
     const handleSignInPrompt = () => {
-        navigation.navigate('Auth' as never);
+        navigation.navigate('Auth');
     };
 
     // Safe handling of rating values
@@ -113,7 +119,7 @@ const MovieDetailScreen = () => {
 
                         <View style={styles.metaInfo}>
                             <Text style={styles.year}>
-                                {year ? new Date(year).getFullYear() : 'Unknown'}
+                                {year}
                             </Text>
                             {movie.runtime && (
                                 <>
@@ -203,172 +209,172 @@ const MovieDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    backdropContainer: {
-        height: height * 0.3,
-        position: 'relative',
-    },
-    backdrop: {
-        width: '100%',
-        height: '100%',
-    },
-    gradient: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '60%',
-    },
-    backButtonOverlay: {
-        position: 'absolute',
-        top: 50,
-        left: 16,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        borderRadius: 20,
-        padding: 8,
-    },
-    content: {
-        flex: 1,
-        marginTop: -60,
-        paddingHorizontal: 16,
-    },
-    headerSection: {
-        flexDirection: 'row',
-        marginBottom: 20,
-    },
-    poster: {
-        width: 120,
-        height: 180,
-        borderRadius: 12,
-        marginRight: 16,
-    },
-    basicInfo: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: COLORS.text,
-        marginBottom: 8,
-    },
-    metaInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    year: {
-        fontSize: 16,
-        color: COLORS.textSecondary,
-    },
-    separator: {
-        fontSize: 16,
-        color: COLORS.textSecondary,
-    },
-    runtime: {
-        fontSize: 16,
-        color: COLORS.textSecondary,
-    },
-    genres: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        marginBottom: 12,
-    },
-    ratingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    rating: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: COLORS.text,
-        marginLeft: 4,
-    },
-    voteCount: {
-        fontSize: 12,
-        color: COLORS.textSecondary,
-        marginLeft: 8,
-    },
-    actionButtons: {
-        marginBottom: 24,
-    },
-    signInPrompt: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 20,
-        justifyContent: 'center',
-    },
-    signInText: {
-        marginLeft: 8,
-        fontSize: 14,
-        fontWeight: '600',
-        color: COLORS.background,
-    },
-    section: {
-        marginBottom: 24,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: COLORS.text,
-        marginBottom: 12,
-    },
-    tagline: {
-        fontSize: 16,
-        fontStyle: 'italic',
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-    },
-    overview: {
-        fontSize: 16,
-        lineHeight: 24,
-        color: COLORS.text,
-    },
-    detailRow: {
-        flexDirection: 'row',
-        marginBottom: 8,
-    },
-    detailLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: COLORS.textSecondary,
-        width: 100,
-    },
-    detailValue: {
-        fontSize: 14,
-        color: COLORS.text,
-        flex: 1,
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: COLORS.background,
-        padding: 32,
-    },
-    errorText: {
-        fontSize: 16,
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-        marginBottom: 24,
-    },
-    backButton: {
-        backgroundColor: COLORS.primary,
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
-    },
-    backButtonText: {
-        color: COLORS.background,
-        fontSize: 16,
-        fontWeight: '600',
-    },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  backdropContainer: {
+    height: height * 0.3,
+    position: 'relative',
+  },
+  backdrop: {
+    width: '100%',
+    height: '100%',
+  },
+  gradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+  },
+  backButtonOverlay: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 8,
+  },
+  content: {
+    flex: 1,
+    marginTop: -60,
+    paddingHorizontal: 16,
+  },
+  headerSection: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  poster: {
+    width: 120,
+    height: 180,
+    borderRadius: 12,
+    marginRight: 16,
+  },
+  basicInfo: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  metaInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  year: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  separator: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  runtime: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  genres: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 12,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rating: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginLeft: 4,
+  },
+  voteCount: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginLeft: 8,
+  },
+  actionButtons: {
+    marginBottom: 24,
+  },
+  signInPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    justifyContent: 'center',
+  },
+  signInText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.background,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  tagline: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  overview: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: COLORS.text,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    width: 100,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: COLORS.text,
+    flex: 1,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    padding: 32,
+  },
+  errorText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  backButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: COLORS.background,
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
 export default MovieDetailScreen;
