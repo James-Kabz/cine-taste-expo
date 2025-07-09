@@ -1,47 +1,42 @@
 {
   "expo": {
-    "name": "CineTasteApp",
+    "name": "cinetaste",
     "slug": "cinetaste",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/images/icon.png",
+    "scheme": "cinetaste",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.cinetaste"
+      "supportsTablet": true
     },
     "android": {
-      "package": "com.yourcompany.cinetaste",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
     },
-    "scheme": "cinetaste",
     "plugins": [
-      "expo-web-browser",
+      "expo-router",
       [
-        "expo-dev-client",
+        "expo-splash-screen",
         {
-          "launchMode": "most-recent"
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
         }
       ]
     ],
-    "extra": {
-      "eas": {
-        "projectId": "713d8c72-3063-4397-890c-4897bbfa416b"
-      }
-    },
-    "owner": "jimkharr"
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
