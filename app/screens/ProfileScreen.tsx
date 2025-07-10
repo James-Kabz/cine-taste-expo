@@ -1,75 +1,85 @@
-
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { COLORS } from '@/utils/constants';
-import { useSession } from '@/hooks/useSession';
-
+"use client"
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from "react-native"
+import { MaterialIcons } from "@expo/vector-icons"
+import { Image } from "expo-image"
+import { COLORS } from "@/utils/constants"
+import { useAuth } from "@/context/AuthContext"
 
 const ProfileScreen = () => {
-  const { session, signOut } = useSession();
+  const { session, signOut, refreshSession } = useAuth()
 
   const handleSignOut = () => {
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await signOut();
-            } catch (error) {
-                console.log(error);
-              Alert.alert("Error", "Failed to sign out");
-            }
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOut()
+          } catch (error) {
+            console.log(error)
+            Alert.alert("Error", "Failed to sign out")
           }
-        }
-      ]
-    );
-  };
+        },
+      },
+    ])
+  }
+
+  const handleRefreshSession = async () => {
+    try {
+      await refreshSession()
+      Alert.alert("Success", "Session refreshed successfully!")
+    } catch (error) {
+      console.log(error)
+      Alert.alert("Error", "Failed to refresh session.")
+    }
+  }
 
   const menuItems = [
     {
-      icon: 'notifications',
-      title: 'Notifications',
-      subtitle: 'Manage your notification preferences',
+      icon: "refresh",
+      title: "Refresh Session",
+      subtitle: "Update your authentication status",
+      onPress: handleRefreshSession,
+    },
+    {
+      icon: "notifications",
+      title: "Notifications",
+      subtitle: "Manage your notification preferences",
       onPress: () => Alert.alert("Coming Soon", "Notifications settings will be available soon"),
     },
     {
-      icon: 'language',
-      title: 'Language',
-      subtitle: 'Choose your preferred language',
+      icon: "language",
+      title: "Language",
+      subtitle: "Choose your preferred language",
       onPress: () => Alert.alert("Coming Soon", "Language settings will be available soon"),
     },
     {
-      icon: 'palette',
-      title: 'Theme',
-      subtitle: 'Switch between light and dark mode',
+      icon: "palette",
+      title: "Theme",
+      subtitle: "Switch between light and dark mode",
       onPress: () => Alert.alert("Coming Soon", "Theme settings will be available soon"),
     },
     {
-      icon: 'storage',
-      title: 'Storage',
-      subtitle: 'Manage downloaded content',
+      icon: "storage",
+      title: "Storage",
+      subtitle: "Manage downloaded content",
       onPress: () => Alert.alert("Coming Soon", "Storage management will be available soon"),
     },
     {
-      icon: 'help',
-      title: 'Help & Support',
-      subtitle: 'Get help and contact support',
+      icon: "help",
+      title: "Help & Support",
+      subtitle: "Get help and contact support",
       onPress: () => Alert.alert("Coming Soon", "Help section will be available soon"),
     },
     {
-      icon: 'info',
-      title: 'About',
-      subtitle: 'App version and information',
+      icon: "info",
+      title: "About",
+      subtitle: "App version and information",
       onPress: () => Alert.alert("CineTaste", "Version 1.0.0\n\nYour personal movie and TV show companion."),
     },
-  ];
+  ]
 
   return (
     <ScrollView style={styles.container}>
@@ -77,20 +87,15 @@ const ProfileScreen = () => {
       <View style={styles.profileSection}>
         <View style={styles.avatarContainer}>
           {session?.user.image ? (
-            <Image
-              style={styles.avatar}
-              source={{ uri: session.user.image }}
-              contentFit="cover"
-            />
+            <Image style={styles.avatar} source={{ uri: session.user.image }} contentFit="cover" />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <MaterialIcons name="person" size={40} color={COLORS.textSecondary} />
             </View>
           )}
         </View>
-        
-        <Text style={styles.userName}>{session?.user.name || 'Unknown User'}</Text>
-        <Text style={styles.userEmail}>{session?.user.email || 'No email'}</Text>
+        <Text style={styles.userName}>{session?.user.name || "Unknown User"}</Text>
+        <Text style={styles.userEmail}>{session?.user.email || "No email"}</Text>
       </View>
 
       {/* Stats Section */}
@@ -114,17 +119,9 @@ const ProfileScreen = () => {
       {/* Menu Items */}
       <View style={styles.menuSection}>
         {menuItems.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.menuItem}
-            onPress={item.onPress}
-          >
+          <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
             <View style={styles.menuItemLeft}>
-              <MaterialIcons 
-                name={item.icon as any} 
-                size={24} 
-                color={COLORS.textSecondary} 
-              />
+              <MaterialIcons name={item.icon as any} size={24} color={COLORS.textSecondary} />
               <View style={styles.menuItemText}>
                 <Text style={styles.menuItemTitle}>{item.title}</Text>
                 <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
@@ -145,13 +142,11 @@ const ProfileScreen = () => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Made with ❤️ for movie lovers
-        </Text>
+        <Text style={styles.footerText}>Made with ❤️ for movie lovers</Text>
       </View>
     </ScrollView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -159,7 +154,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   profileSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 32,
     paddingHorizontal: 16,
   },
@@ -176,12 +171,12 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     backgroundColor: COLORS.card,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   userName: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text,
     marginBottom: 4,
   },
@@ -190,7 +185,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   statsSection: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: COLORS.card,
     marginHorizontal: 16,
     borderRadius: 12,
@@ -199,18 +194,18 @@ const styles = StyleSheet.create({
   },
   statItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   statDivider: {
     width: 1,
@@ -221,17 +216,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
   },
   menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   menuItemText: {
@@ -240,7 +235,7 @@ const styles = StyleSheet.create({
   },
   menuItemTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: 2,
   },
@@ -253,9 +248,9 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: COLORS.card,
     borderRadius: 12,
     paddingVertical: 16,
@@ -265,19 +260,19 @@ const styles = StyleSheet.create({
   signOutText: {
     marginLeft: 8,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.primary,
   },
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 32,
     paddingHorizontal: 16,
   },
   footerText: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
-});
+})
 
-export default ProfileScreen;
+export default ProfileScreen

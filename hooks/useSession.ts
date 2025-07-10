@@ -2,7 +2,7 @@
 
 import { useRouter } from "expo-router"
 import * as WebBrowser from "expo-web-browser"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import * as Linking from "expo-linking"
 
@@ -43,24 +43,8 @@ export const useSession = () => {
         }
     }
 
-    const signInWithToken = async (token: string) => {
-        try {
-            setLoading(true)
-            console.log("Signing in with manual token...")
 
-            await AsyncStorage.setItem("auth_token", token)
-            await fetchSessionWithToken(token)
-            router.replace("/(tabs)/(home)")
-            return true
-        } catch (error) {
-            console.error("Token authentication error:", error)
-            throw error
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const fetchSessionWithToken = async (token: string) => {
+    const fetchSessionWithToken = useCallback(async (token: string) => {
         try {
             console.log("Fetching session with token...")
 
@@ -91,33 +75,7 @@ export const useSession = () => {
             console.error("Session fetch error:", error)
             throw error
         }
-    }
-
-    const checkSession = async () => {
-        try {
-            const storedSession = await AsyncStorage.getItem("session")
-            const storedToken = await AsyncStorage.getItem("auth_token")
-
-            if (storedSession) {
-                const sessionData = JSON.parse(storedSession)
-                setSession(sessionData)
-                setLoading(false)
-                return
-            }
-
-            if (storedToken) {
-                await fetchSessionWithToken(storedToken)
-                return
-            }
-
-            setSession(null)
-        } catch (error) {
-            console.error("Session check error:", error)
-            setSession(null)
-        } finally {
-            setLoading(false)
-        }
-    }
+    }, [setSession])
 
     const signOut = async () => {
         try {
@@ -130,8 +88,26 @@ export const useSession = () => {
         }
     }
 
+    const signInWithToken = useCallback(async (token: string) => {
+        try {
+            setLoading(true)
+            console.log("Signing in with manual token...")
+
+            await AsyncStorage.setItem("auth_token", token)
+            await fetchSessionWithToken(token)
+            router.replace("/(tabs)/(home)")
+            return true
+        } catch (error) {
+            console.error("Token authentication error:", error)
+            throw error
+        } finally {
+            setLoading(false)
+        }
+    }, [router, setLoading, fetchSessionWithToken])
+
     // Handle deep links (still keep this in case deep linking works)
     useEffect(() => {
+
         const handleDeepLink = (url: string) => {
             console.log("Deep link received:", url)
 
@@ -160,11 +136,36 @@ export const useSession = () => {
         return () => {
             subscription?.remove()
         }
-    }, [])
+    }, [router, signInWithToken])
 
     useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const storedSession = await AsyncStorage.getItem("session")
+                const storedToken = await AsyncStorage.getItem("auth_token")
+
+                if (storedSession) {
+                    const sessionData = JSON.parse(storedSession)
+                    setSession(sessionData)
+                    setLoading(false)
+                    return
+                }
+
+                if (storedToken) {
+                    await fetchSessionWithToken(storedToken)
+                    return
+                }
+
+                setSession(null)
+            } catch (error) {
+                console.error("Session check error:", error)
+                setSession(null)
+            } finally {
+                setLoading(false)
+            }
+        }
         checkSession()
-    }, [])
+    }, [fetchSessionWithToken])
 
     return {
         data: session,
@@ -172,7 +173,7 @@ export const useSession = () => {
         status: loading ? "loading" : session ? "authenticated" : "unauthenticated",
         loading,
         signIn,
-        signInWithToken, // New method for manual token entry
+        signInWithToken,
         signOut,
     }
 }
