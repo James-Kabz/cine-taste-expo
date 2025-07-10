@@ -2,8 +2,8 @@
 // import { StyleSheet } from "react-native"
 import { useAuth } from "@/context/AuthContext"
 // import { COLORS } from "@/utils/constants"
-import ProfileScreen from "../screens/ProfileScreen"
 import AuthScreen from "../screens/AuthScreen"
+import ProfileScreen from "../screens/ProfileScreen"
 
 export default function Profile() {
   const { isAuthenticated } = useAuth()

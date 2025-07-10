@@ -1,23 +1,24 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import {
-  StyleSheet,
-  ScrollView,
-  View,
-  Image,
-  TouchableOpacity,
-  ActivityIndicator,
-  Linking,
-  RefreshControl,
-} from "react-native"
-import { useLocalSearchParams, useRouter } from "expo-router"
-import { Ionicons } from "@expo/vector-icons"
-import { LinearGradient } from "expo-linear-gradient"
 import { ThemedText } from "@/components/ThemedText"
 import { ThemedView } from "@/components/ThemedView"
-import type { MovieDetails, CastMember, Video } from "@/types"
 import { useAuth } from "@/context/AuthContext"
+import type { CastMember, MovieDetails, Video } from "@/types"
+import { Ionicons } from "@expo/vector-icons"
+import { LinearGradient } from "expo-linear-gradient"
+import { useLocalSearchParams, useRouter } from "expo-router"
+import { useCallback, useEffect, useState } from "react"
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native"
 
 interface MovieData {
   movie: MovieDetails
@@ -44,14 +45,18 @@ export default function MovieDetailsScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isInWatchlist, setIsInWatchlist] = useState(false)
+  const [watchlistLoading] = useState(false)
 
-  const checkWatchlistStatus = useCallback(async  () => {
+  const checkWatchlistStatus = useCallback(async () => {
     if (!session?.user) return
 
     try {
+      const token = await getStoredToken()
+      if (!token) return
+
       const response = await fetch("https://cinetaste-254.vercel.app/api/watchlist", {
         headers: {
-          Authorization: `Bearer ${session.user.id}`, // Using user ID as token for now
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       })
@@ -64,7 +69,8 @@ export default function MovieDetailsScreen() {
       console.error("Error checking watchlist:", error)
     }
   }, [movieId, session])
-  
+
+
   const fetchMovieData = useCallback(async () => {
     try {
       setLoading(true)
@@ -105,6 +111,17 @@ export default function MovieDetailsScreen() {
 
 
 
+  // Helper function to get stored token
+  const getStoredToken = async () => {
+    try {
+      const AsyncStorage = await import("@react-native-async-storage/async-storage")
+      return await AsyncStorage.default.getItem("auth_token")
+    } catch (error) {
+      console.error("Error getting stored token:", error)
+      return null
+    }
+  }
+
   const onRefresh = async () => {
     setRefreshing(true)
     await Promise.all([fetchMovieData(), refreshSession()])
@@ -117,32 +134,48 @@ export default function MovieDetailsScreen() {
     }
   }, [movieId, fetchMovieData])
 
-  const handleAddToWatchlist = async () => {
-    if (!session?.user) {
-      router.push("/screens/AuthScreen")
-      return
+  const handleAddToWatchlist = useCallback(async () => {
+    if (!session?.user?.id) {
+      router.push("/(tabs)/profile");
+      return;
     }
 
     try {
+      const token = await getStoredToken();
+      if (!token) {
+        console.log("No token found");
+        router.push("/(tabs)/profile");
+        return;
+      }
+
+      console.log("Attempting to", isInWatchlist ? "remove from" : "add to", "watchlist");
+
       const response = await fetch("https://cinetaste-254.vercel.app/api/watchlist", {
         method: isInWatchlist ? "DELETE" : "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.id}`,
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
           movieId: Number(movieId),
           mediaType: "movie",
         }),
-      })
+      });
 
-      if (response.ok) {
-        setIsInWatchlist(!isInWatchlist)
+      console.log("Watchlist response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Watchlist error:", errorData);
+        throw new Error(errorData.message || "Failed to update watchlist");
       }
+
+      setIsInWatchlist(!isInWatchlist);
     } catch (error) {
-      console.error("Error updating watchlist:", error)
+      console.error("Error updating watchlist:", error);
+      Alert.alert("Error", "Failed to update watchlist. Please try again.");
     }
-  }
+  }, [session, movieId, isInWatchlist, router]);
 
   const openTrailer = (key: string) => {
     Linking.openURL(`https://www.youtube.com/watch?v=${key}`)
@@ -233,11 +266,22 @@ export default function MovieDetailsScreen() {
           )}
           {director && <ThemedText style={styles.directorText}>Director: {director.name}</ThemedText>}
           <TouchableOpacity
-            style={[styles.watchlistButton, isInWatchlist && styles.watchlistButtonActive]}
+            style={[
+              styles.watchlistButton,
+              isInWatchlist && styles.watchlistButtonActive,
+              watchlistLoading && styles.watchlistButtonLoading,
+            ]}
             onPress={handleAddToWatchlist}
+            disabled={watchlistLoading}
           >
-            <Ionicons name={isInWatchlist ? "bookmark" : "bookmark-outline"} size={20} color="white" />
-            <ThemedText style={styles.watchlistText}>{isInWatchlist ? "In Watchlist" : "Add to Watchlist"}</ThemedText>
+            {watchlistLoading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Ionicons name={isInWatchlist ? "bookmark" : "bookmark-outline"} size={20} color="white" />
+            )}
+            <ThemedText style={styles.watchlistText}>
+              {watchlistLoading ? "Processing..." : isInWatchlist ? "In Watchlist" : "Add to Watchlist"}
+            </ThemedText>
           </TouchableOpacity>
         </View>
       </View>
@@ -514,4 +558,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textAlign: "center",
   },
+  watchlistButtonLoading: {
+  opacity: 0.7,
+},
 })

@@ -23,6 +23,7 @@ export const COLORS = {
   error: '#ff6b6b',
   warning: '#ffa726',
   success: '#4caf50',
+  border: '#303030',
   // success_light: 'rgba(76, 175, 80, 0.1)',
 
 };

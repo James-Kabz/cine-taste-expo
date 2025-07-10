@@ -65,12 +65,10 @@ export default function HomeScreen() {
 
   const fetchWatchlist = useCallback(async () => {
     if (!session?.user) {
-      console.log("No session, skipping watchlist fetch")
       return
     }
 
     try {
-      console.log("Fetching watchlist for user:", session.user.email)
       
       const response = await fetch("https://cinetaste-254.vercel.app/api/watchlist", {
         method: "GET",
@@ -81,7 +79,6 @@ export default function HomeScreen() {
         },
       })
 
-      console.log("Watchlist response status:", response.status)
       
       if (!response.ok) {
         const errorText = await response.text()
@@ -90,7 +87,6 @@ export default function HomeScreen() {
       }
 
       const data = await response.json()
-      console.log("Watchlist data received:", data)
       setWatchlist(data.map((item: any) => item.movieId))
     } catch (error) {
       console.error("Error fetching watchlist:", error)
@@ -138,17 +134,15 @@ export default function HomeScreen() {
   const handleAddToWatchlist = useCallback(
     async (movieId: number) => {
       if (!session?.user) {
-        router.push("/screens/AuthScreen")
+        router.push("/(tabs)/profile")
         return
       }
 
       try {
-        console.log("Adding movie to watchlist:", movieId)
-        
         const token = await getStoredToken()
         if (!token) {
           console.error("No auth token available")
-          router.push("/screens/AuthScreen")
+          router.push("/(tabs)/profile")
           return
         }
 
@@ -263,7 +257,7 @@ export default function HomeScreen() {
 
         {/* Authentication Prompt */}
         {!session?.user && (
-          <TouchableOpacity style={styles.authPrompt} onPress={() => router.push("/screens/AuthScreen")}>
+          <TouchableOpacity style={styles.authPrompt} onPress={() => router.push("/(tabs)/profile")}>
             <ThemedText style={styles.authPromptText}>Sign in to personalize your experience</ThemedText>
           </TouchableOpacity>
         )}

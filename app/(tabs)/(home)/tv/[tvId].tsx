@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { ScrollView, View, Image, TouchableOpacity, ActivityIndicator, StyleSheet, RefreshControl } from "react-native"
-import { useLocalSearchParams, useRouter } from "expo-router"
-import { Ionicons } from "@expo/vector-icons"
-import { LinearGradient } from "expo-linear-gradient"
 import { ThemedText } from "@/components/ThemedText"
 import { ThemedView } from "@/components/ThemedView"
 import { useAuth } from "@/context/AuthContext"
+import { Ionicons } from "@expo/vector-icons"
+import { LinearGradient } from "expo-linear-gradient"
+import { useLocalSearchParams, useRouter } from "expo-router"
+import { useCallback, useEffect, useState } from "react"
+import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native"
 
 interface TVShowData {
   tv: {
@@ -42,27 +42,39 @@ export default function TVShowDetailScreen() {
   const router = useRouter()
   const { session, refreshSession } = useAuth()
   const [tvData, setTvData] = useState<TVShowData | null>(null)
-  const [watchlist, setWatchlist] = useState<number[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isInWatchlist, setIsInWatchlist] = useState(false)
+  const [watchlistLoading, setWatchlistLoading] = useState(false)
 
-  const trackRecentlyViewed = useCallback(async (movieId: number, mediaType: string) => {
-    if (!session?.user?.id) return
-    
+
+  const checkWatchlistStatus = useCallback(async () => {
+    if (!session?.user) return
+
     try {
-      await fetch("https://cinetaste-254.vercel.app/api/recently-viewed", {
-        method: "POST",
-        headers: { 
+      const token = await getStoredToken()
+      if (!token) return
+
+      const response = await fetch("https://cinetaste-254.vercel.app/api/watchlist", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.id}`
         },
-        body: JSON.stringify({ movieId, mediaType }),
       })
+
+      if (response.ok) {
+        const watchlist = await response.json()
+        const inWatchlist = watchlist.some((item: any) => {
+          return item.movieId === Number(tvId) && item.mediaType === "tv"
+        })
+        setIsInWatchlist(inWatchlist)
+      }
     } catch (error) {
-      console.error("Error tracking recently viewed:", error)
+      console.error("Error checking watchlist:", error)
     }
-  }, [session])
+  }, [tvId, session])
 
   const fetchTVData = useCallback(async () => {
     try {
@@ -71,78 +83,45 @@ export default function TVShowDetailScreen() {
 
       const response = await fetch(`https://cinetaste-254.vercel.app/api/tv/${tvId}`)
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      if (!response.ok) throw new Error("Failed to fetch TV show details")
 
       const data = await response.json()
-      setTvData(data)
+      setTvData({
+        tv: data.tv || data,
+        credits: data.credits || { cast: [] },
+        recommendations: data.recommendations || { results: [] },
+      })
+
+      // Check watchlist if user is logged in
+      if (session?.user) {
+        await checkWatchlistStatus()
+      }
     } catch (error) {
       console.error("Error fetching TV show details:", error)
-      setError("Failed to load TV show details. Please try again later.")
+      setError("Failed to load TV show details")
     } finally {
       setLoading(false)
     }
-  }, [tvId])
+  }, [tvId, session, checkWatchlistStatus])
 
-  const fetchWatchlist = useCallback(async () => {
-    if (!session?.user?.id) return
 
+
+  // Helper function to get stored token
+  const getStoredToken = async () => {
     try {
-      const response = await fetch("https://cinetaste-254.vercel.app/api/watchlist", {
-        headers: {
-          Authorization: `Bearer ${session.user.id}`
-        }
-      })
-      
-      if (!response.ok) return
-      
-      const data = await response.json()
-      setWatchlist(data.map((item: any) => item.movieId))
+      const AsyncStorage = await import("@react-native-async-storage/async-storage")
+      return await AsyncStorage.default.getItem("auth_token")
     } catch (error) {
-      console.error("Error fetching watchlist:", error)
+      console.error("Error getting stored token:", error)
+      return null
     }
-  }, [session])
+  }
 
-  const handleAddToWatchlist = useCallback(async (tvId: number, sendEmail: boolean = false) => {
-    if (!session?.user?.id) {
-      router.push("/screens/AuthScreen")
-      return
-    }
-
-    try {
-      const response = await fetch("https://cinetaste-254.vercel.app/api/watchlist", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.id}`,
-        },
-        body: JSON.stringify({
-          movieId: tvId,
-          mediaType: "tv",
-          sendEmail,
-        }),
-      })
-
-      if (response.ok) {
-        setWatchlist(prev => [...prev, tvId])
-      } else {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to add to watchlist")
-      }
-    } catch (error) {
-      console.error("Error adding to watchlist:", error)
-    }
-  }, [session, router])
-
-  const onRefresh = useCallback(async () => {
+  const onRefresh = async () => {
     setRefreshing(true)
-    try {
-      await Promise.all([fetchTVData(), fetchWatchlist(), refreshSession()])
-    } finally {
-      setRefreshing(false)
-    }
-  }, [fetchTVData, fetchWatchlist, refreshSession])
+    await Promise.all([fetchTVData(), refreshSession()])
+    setRefreshing(false)
+  }
 
   useEffect(() => {
     if (tvId) {
@@ -150,17 +129,55 @@ export default function TVShowDetailScreen() {
     }
   }, [tvId, fetchTVData])
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetchWatchlist()
+  const handleAddToWatchlist = useCallback(async () => {
+    if (!session?.user) {
+      router.push("/(tabs)/profile")
+      return
     }
-  }, [session, fetchWatchlist])
 
-  useEffect(() => {
-    if (tvData?.tv && session?.user?.id && tvId) {
-      trackRecentlyViewed(Number(tvId), "tv")
+    if (watchlistLoading) return // Prevent multiple simultaneous requests
+
+    try {
+      setWatchlistLoading(true)
+      const token = await getStoredToken()
+
+      if (!token) {
+        console.log("No token available")
+        router.push("/(tabs)/profile")
+        return
+      }
+
+      const currentStatus = isInWatchlist
+
+      const response = await fetch("https://cinetaste-254.vercel.app/api/watchlist", {
+        method: currentStatus ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          movieId: Number(tvId),
+          mediaType: "tv",
+        }),
+      })
+
+
+      if (response.ok) {
+        // Update local state immediately for better UX
+        setIsInWatchlist(!currentStatus)
+        Alert.alert("Success", "Watchlist updated successfully!")
+      } else {
+        const errorData = await response.json()
+        console.error("Watchlist error:", errorData)
+        throw new Error(errorData.error || "Failed to update watchlist")
+      }
+    } catch (error) {
+      console.error("Error updating watchlist:", error)
+      // You could show a toast or alert here if needed
+    } finally {
+      setWatchlistLoading(false)
     }
-  }, [tvData, session, tvId, trackRecentlyViewed])
+  }, [session, tvId, isInWatchlist, router, watchlistLoading])
 
   if (loading && !refreshing) {
     return (
@@ -171,13 +188,22 @@ export default function TVShowDetailScreen() {
     )
   }
 
-  if (error || !tvData?.tv) {
+  if (error) {
     return (
       <ThemedView style={styles.errorContainer}>
-        <ThemedText type="title">{error || "TV show not found"}</ThemedText>
+        <ThemedText type="title">Error</ThemedText>
+        <ThemedText>{error}</ThemedText>
         <TouchableOpacity onPress={fetchTVData} style={styles.retryButton}>
           <ThemedText style={styles.retryButtonText}>Try Again</ThemedText>
         </TouchableOpacity>
+      </ThemedView>
+    )
+  }
+
+  if (!tvData?.tv) {
+    return (
+      <ThemedView style={styles.errorContainer}>
+        <ThemedText>TV show not found</ThemedText>
       </ThemedView>
     )
   }
@@ -246,27 +272,20 @@ export default function TVShowDetailScreen() {
             </View>
           )}
           {creator && <ThemedText style={styles.directorText}>Creator: {creator.name}</ThemedText>}
-          
-          {/* Watchlist Button - Following the pattern from first code */}
-          {session?.user && (
-            <TouchableOpacity
-              style={[
-                styles.watchlistButton, 
-                watchlist.includes(tv.id) && styles.watchlistButtonActive
-              ]}
-              onPress={() => handleAddToWatchlist(tv.id, false)}
-              disabled={watchlist.includes(tv.id)}
-            >
-              <Ionicons 
-                name={watchlist.includes(tv.id) ? "bookmark" : "bookmark-outline"} 
-                size={20} 
-                color="white" 
-              />
-              <ThemedText style={styles.watchlistText}>
-                {watchlist.includes(tv.id) ? "✓ In Watchlist" : "Add to Watchlist"}
-              </ThemedText>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[
+              styles.watchlistButton,
+              isInWatchlist && styles.watchlistButtonActive,
+              watchlistLoading && styles.watchlistButtonLoading,
+            ]}
+            onPress={handleAddToWatchlist}
+            disabled={watchlistLoading}
+          >
+            <Ionicons name={isInWatchlist ? "bookmark" : "bookmark-outline"} size={20} color="white" />
+            <ThemedText style={styles.watchlistText}>
+              {watchlistLoading ? "Updating..." : isInWatchlist ? "In Watchlist" : "Add to Watchlist"}
+            </ThemedText>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -457,6 +476,9 @@ const styles = StyleSheet.create({
   },
   watchlistButtonActive: {
     backgroundColor: "#34C759",
+  },
+  watchlistButtonLoading: {
+    opacity: 0.7,
   },
   watchlistText: {
     color: "white",

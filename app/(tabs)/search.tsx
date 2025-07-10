@@ -29,7 +29,6 @@ export default function SearchPage() {
           value={query}
           onChangeText={setQuery}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           autoCapitalize="none"
           autoCorrect={false}
         />
