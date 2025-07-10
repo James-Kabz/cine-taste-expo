@@ -1,184 +1,111 @@
+"use client"
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSession } from '@/hooks/useSession';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { COLORS } from '@/utils/constants';
+import { useState } from "react"
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native"
+import ManualAuthModal from "@/components/manual-auth-modal"
+import { useSession } from "@/hooks/useSession"
 
-// const { width, height } = Dimensions.get('window');
-
-const AuthScreen = () => {
-  const { signIn } = useSession();
-  const [isLoading, setIsLoading] = useState(false);
+export default function AuthScreen() {
+  const { signIn, signInWithToken, loading } = useSession()
+  const [showManualAuth, setShowManualAuth] = useState(false)
 
   const handleGoogleSignIn = async () => {
     try {
-      setIsLoading(true);
-      await signIn();
+      const result = await signIn("google")
+      if (result === "manual") {
+        // Show instructions for manual token entry
+        Alert.alert(
+          "Complete Authentication",
+          "A browser window has opened. Copy the token from the page or scan the QR code, then tap 'Enter Token Manually' below.",
+          [{ text: "OK" }],
+        )
+      }
     } catch (error) {
-      console.error('Sign in error:', error);
-      Alert.alert(
-        "Sign In Failed",
-        "Unable to sign in with Google. Please try again.",
-        [{ text: "OK" }]
-      );
-    } finally {
-      setIsLoading(false);
+      console.log(error)
+      Alert.alert("Error", "Failed to sign in. Please try again.")
     }
-  };
+  }
 
-  if (isLoading) {
-    return <LoadingSpinner text="Signing in..." />;
+  const handleManualToken = async (token: string) => {
+    try {
+      await signInWithToken(token)
+      setShowManualAuth(false)
+    } catch (error) {
+      console.log(error)
+      Alert.alert("Error", "Invalid token. Please try again.")
+    }
   }
 
   return (
-    <LinearGradient
-      colors={[COLORS.background, COLORS.card, COLORS.background]}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <View style={styles.content}>
-        {/* Logo/Icon */}
-        <View style={styles.logoContainer}>
-          <View style={styles.logoBackground}>
-            <MaterialIcons name="movie" size={60} color={COLORS.primary} />
-          </View>
-        </View>
+        <Text style={styles.title}>Welcome to Cinetaste</Text>
+        <Text style={styles.subtitle}>Sign in to continue</Text>
 
-        {/* Title and Subtitle */}
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>Welcome to CineTaste</Text>
-          <Text style={styles.subtitle}>
-            Discover, track, and enjoy your favorite movies and TV shows
-          </Text>
-        </View>
+        <TouchableOpacity style={[styles.button, styles.googleButton]} onPress={handleGoogleSignIn} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? "Signing in..." : "Sign in with Google"}</Text>
+        </TouchableOpacity>
 
-        {/* Features List */}
-        <View style={styles.featuresContainer}>
-          <View style={styles.feature}>
-            <MaterialIcons name="search" size={24} color={COLORS.accent} />
-            <Text style={styles.featureText}>Discover new movies and shows</Text>
-          </View>
-          
-          <View style={styles.feature}>
-            <MaterialIcons name="bookmark" size={24} color={COLORS.accent} />
-            <Text style={styles.featureText}>Create your personal watchlist</Text>
-          </View>
-          
-          <View style={styles.feature}>
-            <MaterialIcons name="star" size={24} color={COLORS.accent} />
-            <Text style={styles.featureText}>Rate and review content</Text>
-          </View>
-          
-          <View style={styles.feature}>
-            <MaterialIcons name="history" size={24} color={COLORS.accent} />
-            <Text style={styles.featureText}>Track your viewing history</Text>
-          </View>
-        </View>
-
-        {/* Sign In Button */}
-        <View style={styles.authContainer}>
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleSignIn}
-            disabled={isLoading}
-          >
-            <MaterialIcons name="login" size={20} color={COLORS.background} />
-            <Text style={styles.googleButtonText}>Sign in with Google</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.termsText}>
-            By signing in, you agree to our Terms of Service and Privacy Policy
-          </Text>
-        </View>
+        <TouchableOpacity style={[styles.button, styles.manualButton]} onPress={() => setShowManualAuth(true)}>
+          <Text style={[styles.buttonText, styles.manualButtonText]}>Enter Token Manually</Text>
+        </TouchableOpacity>
       </View>
-    </LinearGradient>
-  );
-};
+
+      <ManualAuthModal
+        visible={showManualAuth}
+        onClose={() => setShowManualAuth(false)}
+        onTokenSubmit={handleManualToken}
+      />
+    </View>
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f9fafb",
   },
   content: {
     flex: 1,
-    paddingHorizontal: 32,
-    justifyContent: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoBackground: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: COLORS.card,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  textContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    textAlign: 'center',
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#1f2937",
+    marginBottom: 8,
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
+    color: "#6b7280",
+    marginBottom: 48,
+    textAlign: "center",
   },
-  featuresContainer: {
-    marginBottom: 40,
-  },
-  feature: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  button: {
+    width: "100%",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: "center",
     marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  featureText: {
-    marginLeft: 16,
-    fontSize: 16,
-    color: COLORS.text,
-    flex: 1,
-  },
-  authContainer: {
-    alignItems: 'center',
   },
   googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 25,
-    width: '100%',
-    justifyContent: 'center',
-    marginBottom: 16,
+    backgroundColor: "#3b82f6",
   },
-  googleButtonText: {
-    marginLeft: 12,
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.background,
+  manualButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#d1d5db",
   },
-  termsText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
-    paddingHorizontal: 16,
+  buttonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "white",
   },
-});
-
-export default AuthScreen;
+  manualButtonText: {
+    color: "#374151",
+  },
+})

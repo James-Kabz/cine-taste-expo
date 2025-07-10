@@ -4,6 +4,7 @@ import { useRouter } from "expo-router"
 import * as WebBrowser from "expo-web-browser"
 import { useState, useEffect } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import * as Linking from "expo-linking"
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -23,45 +24,36 @@ export const useSession = () => {
 
             console.log("Auth URL:", authUrl)
 
-            // Open browser for authentication
+            // Open browser for authentication - this will show the manual token/QR code page
             const result = await WebBrowser.openAuthSessionAsync(
                 authUrl,
-                "cinetaste://auth-callback", // This is just for the WebBrowser to know when to close
+                "cinetaste://auth-callback", // This might not work, but the manual method will
             )
 
             console.log("Auth result:", result)
 
-            if (result.type === "success" && result.url) {
-                console.log("Success! Redirect URL:", result.url)
-
-                // Parse the URL to extract the token
-                const url = new URL(result.url)
-                const searchParams = url.searchParams
-
-                const success = searchParams.get("success")
-                const token = searchParams.get("token")
-                const error = searchParams.get("error")
-
-                if (error) {
-                    console.error("Authentication error from callback:", error)
-                    throw new Error(`Authentication failed: ${error}`)
-                }
-
-                if (success === "true" && token) {
-                    console.log("Got success and token, fetching session...")
-                    await AsyncStorage.setItem("auth_token", token)
-                    await fetchSessionWithToken(token)
-                    router.replace("/(tabs)/(home)")
-                    return true
-                }
-            } else if (result.type === "cancel") {
-                console.log("User cancelled authentication")
-                return false
-            }
-
-            return false
+            // The browser will stay open showing the token/QR code
+            // User will manually copy the token or scan the QR code
+            return "manual" // Indicate that manual completion is needed
         } catch (error) {
             console.error("Authentication error:", error)
+            throw error
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const signInWithToken = async (token: string) => {
+        try {
+            setLoading(true)
+            console.log("Signing in with manual token...")
+
+            await AsyncStorage.setItem("auth_token", token)
+            await fetchSessionWithToken(token)
+            router.replace("/(tabs)/(home)")
+            return true
+        } catch (error) {
+            console.error("Token authentication error:", error)
             throw error
         } finally {
             setLoading(false)
@@ -93,9 +85,11 @@ export const useSession = () => {
                 }
             } else {
                 console.error("Session fetch failed:", response.status, responseText)
+                throw new Error("Failed to fetch session")
             }
         } catch (error) {
             console.error("Session fetch error:", error)
+            throw error
         }
     }
 
@@ -136,6 +130,38 @@ export const useSession = () => {
         }
     }
 
+    // Handle deep links (still keep this in case deep linking works)
+    useEffect(() => {
+        const handleDeepLink = (url: string) => {
+            console.log("Deep link received:", url)
+
+            if (url.includes("auth-callback")) {
+                const urlObj = new URL(url)
+                const success = urlObj.searchParams.get("success")
+                const token = urlObj.searchParams.get("token")
+
+                if (success === "true" && token) {
+                    console.log("Processing deep link authentication...")
+                    signInWithToken(token)
+                }
+            }
+        }
+
+        const subscription = Linking.addEventListener("url", ({ url }) => {
+            handleDeepLink(url)
+        })
+
+        Linking.getInitialURL().then((url) => {
+            if (url) {
+                handleDeepLink(url)
+            }
+        })
+
+        return () => {
+            subscription?.remove()
+        }
+    }, [])
+
     useEffect(() => {
         checkSession()
     }, [])
@@ -146,6 +172,7 @@ export const useSession = () => {
         status: loading ? "loading" : session ? "authenticated" : "unauthenticated",
         loading,
         signIn,
+        signInWithToken, // New method for manual token entry
         signOut,
     }
 }
