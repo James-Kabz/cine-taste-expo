@@ -6,7 +6,6 @@ import { COLORS } from "@/utils/constants"
 import { useAuth } from "@/context/AuthContext"
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "expo-router"
-import { AuthWebView } from "@/components/AuthWebView"
 
 interface UserStats {
   watchlistTotal: number
@@ -56,16 +55,18 @@ function ManualTokenInput({ onTokenSubmit }: { onTokenSubmit: (token: string) =>
 
 // Auth Component (inline)
 function AuthComponent() {
-  const { signIn, signInWithToken, loading, showWebView, webViewUrl, handleWebViewNavigation, setShowWebView } =
-    useAuth()
+  const { signIn, signInWithToken, loading } = useAuth()
   const [showManualAuth, setShowManualAuth] = useState(false)
 
   const handleGoogleSignIn = async () => {
     try {
       const result = await signIn("google")
-      if (result === "in-app") {
-        // WebView will be shown automatically via state
-        console.log("Authentication started in WebView")
+      if (result === "manual") {
+        Alert.alert(
+          "Complete Authentication",
+          "A browser window has opened. Copy the token from the page or scan the QR code, then tap 'Enter Token Manually' below.",
+          [{ text: "OK" }],
+        )
       }
     } catch (error) {
       console.log(error)
@@ -105,12 +106,7 @@ function AuthComponent() {
         <Text style={styles.disclaimer}>By signing in, you agree to our Terms of Service and Privacy Policy.</Text>
       </View>
 
-      {/* WebView for OAuth */}
-      {showWebView && (
-        <AuthWebView url={webViewUrl} onNavigation={handleWebViewNavigation} onClose={() => setShowWebView(false)} />
-      )}
-
-      {/* Manual Auth Modal */}
+      {/* Complete Manual Auth Modal */}
       {showManualAuth && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
