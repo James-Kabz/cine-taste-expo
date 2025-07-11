@@ -1,8 +1,9 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import * as WebBrowser from "expo-web-browser"
+// import { useRouter } from "expo-router"
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -28,6 +29,10 @@ interface AuthContextType {
   signInWithToken: (token: string) => Promise<boolean>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
+  showWebView: boolean
+  webViewUrl: string
+  handleWebViewNavigation: (event: any) => void
+  setShowWebView: (show: boolean) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -39,90 +44,9 @@ const SESSION_CHECK_INTERVAL = 30 * 1000 // 30 seconds
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-
-
-  const signOut = useCallback(async () => {
-    try {
-      setLoading(true)
-      await AsyncStorage.multiRemove(["session", "auth_token"])
-      setSession(null)
-      console.log("Signed out successfully")
-    } catch (error) {
-      console.error("Sign out error:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-  const fetchSessionWithToken = async (token: string): Promise<Session | null> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/session-mobile`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ token }),
-      })
-
-      if (response.ok) {
-        const sessionData = await response.json()
-        if (sessionData && sessionData.user) {
-          return sessionData
-        }
-      } else {
-        const errorText = await response.text()
-        console.error("Session fetch failed:", response.status, errorText)
-      }
-
-      return null
-    } catch (error) {
-      console.error("Session fetch error:", error)
-      return null
-    }
-  }
-
-  const refreshSession = useCallback(async () => {
-    try {
-      const storedToken = await AsyncStorage.getItem("auth_token")
-      if (storedToken) {
-        console.log("Refreshing session with stored token...")
-        const sessionData = await fetchSessionWithToken(storedToken)
-
-        if (sessionData) {
-          setSession(sessionData)
-          await AsyncStorage.setItem("session", JSON.stringify(sessionData))
-          console.log("Session refreshed successfully")
-        } else {
-          console.log("Session refresh failed, signing out...")
-          await signOut()
-        }
-      }
-    } catch (error) {
-      console.error("Session refresh error:", error)
-      await signOut()
-    }
-  }, [signOut])
-
-
-  const checkSessionValidity = useCallback(async () => {
-    try {
-      const storedSession = await AsyncStorage.getItem("session")
-      if (storedSession) {
-        const sessionData = JSON.parse(storedSession)
-        const expiryTime = new Date(sessionData.expires).getTime()
-        const currentTime = new Date().getTime()
-
-        // If session expires in less than 10 minutes, refresh it
-        if (expiryTime - currentTime < 10 * 60 * 1000) {
-          console.log("Session expiring soon, refreshing...")
-          await refreshSession()
-        }
-      }
-    } catch (error) {
-      console.error("Session validity check error:", error)
-    }
-  }, [refreshSession])
-
+  // const router = useRouter()
+  const [showWebView, setShowWebView] = useState(false)
+  const [webViewUrl, setWebViewUrl] = useState("")
 
   // Auto-refresh session periodically
   useEffect(() => {
@@ -154,41 +78,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (refreshInterval) clearInterval(refreshInterval)
       if (checkInterval) clearInterval(checkInterval)
     }
-  }, [session, checkSessionValidity, refreshSession])
+  }, [session])
+
+  const checkSessionValidity = async () => {
+    try {
+      const storedSession = await AsyncStorage.getItem("session")
+      if (storedSession) {
+        const sessionData = JSON.parse(storedSession)
+        const expiryTime = new Date(sessionData.expires).getTime()
+        const currentTime = new Date().getTime()
+
+        // If session expires in less than 10 minutes, refresh it
+        if (expiryTime - currentTime < 10 * 60 * 1000) {
+          console.log("Session expiring soon, refreshing...")
+          await refreshSession()
+        }
+      }
+    } catch (error) {
+      console.error("Session validity check error:", error)
+    }
+  }
 
   const signIn = async (provider = "google") => {
     try {
       setLoading(true)
-
       const callbackUrl = `${API_BASE_URL}/auth/mobile-callback`
       const authUrl = `${API_BASE_URL}/api/auth/signin/${provider}?callbackUrl=${encodeURIComponent(callbackUrl)}`
 
-      console.log("Opening auth URL:", authUrl)
+      console.log("Opening auth URL in WebView:", authUrl)
 
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, "cinetaste://auth-callback")
+      // Show WebView instead of opening external browser
+      setWebViewUrl(authUrl)
+      setShowWebView(true)
 
-      console.log("Auth result:", result)
-
-      if (result.type === "success" && result.url) {
-        const url = new URL(result.url)
-        const searchParams = url.searchParams
-
-        const success = searchParams.get("success")
-        const token = searchParams.get("token")
-        const error = searchParams.get("error")
-
-        if (error) {
-          throw new Error(`Authentication failed: ${error}`)
-        }
-
-        if (success === "true" && token) {
-          await signInWithToken(token)
-          return true
-        }
-      }
-
-      // Return "manual" to indicate manual token entry is needed
-      return "manual"
+      return "in-app" // Indicate we're handling auth in-app
     } catch (error) {
       console.error("Authentication error:", error)
       throw error
@@ -204,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await AsyncStorage.setItem("auth_token", token)
       const sessionData = await fetchSessionWithToken(token)
-
+      // https://cinetaste-254.vercel.app/api/auth/signin/google?callbackUrl=https%3A%2F%2Fcinetaste-254.vercel.app%2Fauth%2Fmobile-callback
       if (sessionData) {
         setSession(sessionData)
         await AsyncStorage.setItem("session", JSON.stringify(sessionData))
@@ -221,7 +144,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const checkStoredSession = useCallback(async () => {
+  const fetchSessionWithToken = async (token: string): Promise<Session | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/session-mobile`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ token }),
+      })
+
+      if (response.ok) {
+        const sessionData = await response.json()
+        if (sessionData && sessionData.user) {
+          return sessionData
+        }
+      } else {
+        const errorText = await response.text()
+        console.error("Session fetch failed:", response.status, errorText)
+      }
+
+      return null
+    } catch (error) {
+      console.error("Session fetch error:", error)
+      return null
+    }
+  }
+
+  const refreshSession = async () => {
+    try {
+      const storedToken = await AsyncStorage.getItem("auth_token")
+      if (storedToken) {
+        console.log("Refreshing session with stored token...")
+        const sessionData = await fetchSessionWithToken(storedToken)
+
+        if (sessionData) {
+          setSession(sessionData)
+          await AsyncStorage.setItem("session", JSON.stringify(sessionData))
+          console.log("Session refreshed successfully")
+        } else {
+          console.log("Session refresh failed, signing out...")
+          await signOut()
+        }
+      }
+    } catch (error) {
+      console.error("Session refresh error:", error)
+      await signOut()
+    }
+  }
+
+  const checkStoredSession = async () => {
     try {
       const storedSession = await AsyncStorage.getItem("session")
       const storedToken = await AsyncStorage.getItem("auth_token")
@@ -254,12 +227,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [refreshSession])
+  }
+
+  const signOut = async () => {
+    try {
+      setLoading(true)
+      await AsyncStorage.multiRemove(["session", "auth_token"])
+      setSession(null)
+      console.log("Signed out successfully")
+    } catch (error) {
+      console.error("Sign out error:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Initialize session on app start
   useEffect(() => {
     checkStoredSession()
-  }, [checkStoredSession])
+  }, [])
+
+  const handleWebViewNavigation = (event: any) => {
+    const url = event.url
+    console.log("WebView navigating to:", url)
+
+    if (url.includes("auth-callback")) {
+      try {
+        const urlObj = new URL(url)
+        const success = urlObj.searchParams.get("success")
+        const token = urlObj.searchParams.get("token")
+        const error = urlObj.searchParams.get("error")
+
+        if (error) {
+          setShowWebView(false)
+          throw new Error(error)
+        }
+
+        if (success === "true" && token) {
+          console.log("Token received from WebView:", token)
+          setShowWebView(false)
+          signInWithToken(token)
+        }
+      } catch (error) {
+        console.error("WebView navigation error:", error)
+        setShowWebView(false)
+      }
+    }
+  }
 
   const value: AuthContextType = {
     session,
@@ -270,6 +284,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithToken,
     signOut,
     refreshSession,
+    showWebView,
+    webViewUrl,
+    handleWebViewNavigation,
+    setShowWebView,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
