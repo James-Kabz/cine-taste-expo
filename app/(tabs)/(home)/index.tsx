@@ -65,21 +65,24 @@ export default function HomeScreen() {
 
   const fetchWatchlist = useCallback(async () => {
     if (!session?.user) {
+      console.log("No session, skipping watchlist fetch")
       return
     }
 
     try {
-      
+      console.log("Fetching watchlist for user:", session.user.email)
+
       const response = await fetch("https://cinetaste-254.vercel.app/api/watchlist", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           // Use the stored auth token instead of user.id
-          "Authorization": `Bearer ${await getStoredToken()}`,
+          Authorization: `Bearer ${await getStoredToken()}`,
         },
       })
 
-      
+      console.log("Watchlist response status:", response.status)
+
       if (!response.ok) {
         const errorText = await response.text()
         console.error("Watchlist fetch failed:", response.status, errorText)
@@ -87,6 +90,7 @@ export default function HomeScreen() {
       }
 
       const data = await response.json()
+      console.log("Watchlist data received:", data)
       setWatchlist(data.map((item: any) => item.movieId))
     } catch (error) {
       console.error("Error fetching watchlist:", error)
@@ -139,6 +143,8 @@ export default function HomeScreen() {
       }
 
       try {
+        console.log("Adding movie to watchlist:", movieId)
+
         const token = await getStoredToken()
         if (!token) {
           console.error("No auth token available")
@@ -150,12 +156,12 @@ export default function HomeScreen() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ 
-            movieId, 
+          body: JSON.stringify({
+            movieId,
             sendEmail: false,
-            mediaType: "movie"
+            mediaType: "movie",
           }),
         })
 

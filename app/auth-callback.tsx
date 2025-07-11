@@ -18,7 +18,8 @@ export default function AuthCallback() {
 
         if (error) {
           console.error("Authentication error:", error)
-          router.replace("/")
+          // Navigate to home instead of root to avoid deep linking issues
+          router.replace("/(tabs)/(home)")
           return
         }
 
@@ -31,19 +32,25 @@ export default function AuthCallback() {
           // Fetch session data
           await fetchSessionWithToken(token as string)
 
-          // Navigate to home
-          router.replace("/(tabs)/(home)")
+          // Small delay to ensure session is processed
+          setTimeout(() => {
+            // Navigate to profile tab to show the authenticated state
+            router.replace("/(tabs)/profile")
+          }, 500)
         } else {
           console.log("No valid auth data received, redirecting to home")
-          router.replace("/")
+          router.replace("/(tabs)/(home)")
         }
       } catch (error) {
         console.error("Auth callback error:", error)
-        router.replace("/")
+        router.replace("/(tabs)/(home)")
       }
     }
 
-    handleCallback()
+    // Add a small delay to ensure the app is fully loaded
+    const timer = setTimeout(handleCallback, 100)
+
+    return () => clearTimeout(timer)
   }, [params, router])
 
   const fetchSessionWithToken = async (token: string) => {
